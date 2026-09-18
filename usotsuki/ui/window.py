@@ -54,6 +54,19 @@ class UsoWindow(arcade.Window):
         y = (self.height - H) // 2
         return (x, y)
 
+    def table_places(self, offset: int) -> list:
+        """ Bottom, Left, Top, Right
+        """
+
+        x, y = self.center_coordinates
+
+        return [
+            (x, y - offset),
+            (x - offset, y),
+            (x, y + offset),
+            (x + offset, y),
+        ]
+
     @property
     def center_coordinates(self):
         return (int(self.center_x), int(self.center_y))
@@ -73,7 +86,8 @@ class UsoWindow(arcade.Window):
 
         self.render_rect(*self.centered(200, 200), 200, 200, "#88C7C7")
 
-        self.render_text(f"{self.game.chair_order[0].name}", *self.center_coordinates)
+        for coordinate, player in zip(self.table_places(offset = 170), self.game.chair_order):
+            self.render_text(f"{player.name}", *coordinate)
 
     #endregion
 
