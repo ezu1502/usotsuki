@@ -1,4 +1,4 @@
-from usotsuki import Ranks, Suits, Card, Deck, Player, Bot
+from usotsuki.core import Ranks, Suits, Card, Deck, Player, Bot
 import random
 
 def clip(number: int, mini: int, maxi: int) -> int:
@@ -7,6 +7,8 @@ def clip(number: int, mini: int, maxi: int) -> int:
 class Game:
     def __init__(self) -> None:
         self.players: list[Player] = self.summon_players()
+        self.chair_order: list[Player] = self.players.copy()
+        
         self.deck = Deck()
 
         self.team_odd, self.team_even = self.get_teams()
@@ -48,18 +50,20 @@ class Game:
         cards = [f"[{indx}] - {card}" for indx, card in enumerate(player.cards, start = 1)]
 
         trick = f"Cards in trick: {", ".join(map(str, self.trick))}" if self.trick else "- First to play -"
+
+        raising = "call TRUCO" if self.current_value == 1 else f"call it {self.current_value + 3}"
         options = (
             f"VIRA: {self.vira}\n\n"
             f"{trick}\n\n"
             f"Your turn now, {player.name}!\n\n"
             f"Your cards are: \n{",\n".join(cards)}\n\n"
-            f"Type the number of your card to play it, or [F] to FOLD!\n> "
+            f"Type the number of your card to play it, [R] to {raising} or [F] to FOLD!\n> "
         )
         j = 0
         while j < 3:
             choice = player.choose(options) if j == 0 else player.choose(f"{{{j}}} > ")
 
-            if choice.upper() in ["1", "2", "3", "F", "T", "TRUCO"]:
+            if choice.upper() in ["1", "2", "3", "F", "R", "TRUCO"]:
                 return choice
             j += 1
 
@@ -70,6 +74,10 @@ class Game:
             return 100 + card.suit
 
         return card.rank
+
+    def rotate_players(self, last_winner: Player) -> None:
+        i: int = self.players.index(last_winner)
+        self.players = self.players[i:] + self.players[:i]
 
     
     def finish_step(self, special = False) -> bool:
@@ -82,18 +90,51 @@ class Game:
 
         winner_player = next(player for player in self.players if player.had(best_cards[0]))
 
-        value = 5 if special else 1
+        value = 3 if special else 1
 
-        if winner_player in self.team_odd:
-            self.round_score_odd += value
-        else:
-            self.round_score_even += value 
+        self.give_points(winner_player, value)
+
+        print(f"{winner_player.name.upper()} WON THE STEP!")
+        print(f"Hand Score: ODD {self.round_score_odd}-{self.round_score_even} EVEN")
+
 
         self.pile.extend(self.trick)
         self.trick.clear()
 
+        self.rotate_players(winner_player)
         return True
 
+    def truco(self, to_player):
+        i = 0
+
+        while i < 3:
+            question = (
+                "[A] - Accept\n"
+                "[F] - Fold\n"
+                f"[R] - Call it {min(self.current_value + 3, 12)}"
+            ) 
+
+            response = to_player.choose(question, options = ["a", "f", "r"]) if i == 0 else to_player.choose(f"{{{i}}} > ")
+
+            if response.lower() in ["a", "f", "r"]:
+                return response.lower()
+
+            i += 1
+
+
+        return "f"
+            
+
+
+
+    def give_points(self, player: Player, points: int):
+        if player in self.team_odd:
+            self.round_score_odd += points
+        elif player in self.team_even:
+            self.round_score_even += points
+
+    def in_odd_team(self, player: Player) -> bool:
+        return player in self.team_odd
 
     def match(self):
 
@@ -107,7 +148,7 @@ class Game:
             self.deck.give_card(self, 1)
 
         def step() -> bool:
-            for player in self.players:
+            for i, player in enumerate(self.players):
                 choice = self.turn(player)
                 try:
                     choice = clip(int(choice) - 1, 0, len(player) - 1)
@@ -121,12 +162,46 @@ class Game:
                     choice = str(choice)
                     match choice.lower():
                         case "f":
-                            # ! FOLDOU
-                            ...
-                        case "t" | "truco":
-                            self.current_value = 3
-                            # ! TRUCOU
-                            ...
+                            print(f"-- {player.name} folded! --")
+                            if self.in_odd_team(player):
+                                self.round_score_even += 3
+                            else:
+                                self.round_score_odd += 3
+
+                            return True
+                            
+                        case "r" | "truco":
+                            print(f"{player.name.upper()} called TRUCO!\n\n")
+
+
+                            next_responding = True
+                            p = self.players[(i+1) % len(self.players)] if next_responding else player
+
+                            while True:
+                                response = self.truco(p)
+
+                                if response != "r":
+                                    break
+
+                                
+                                print(f"{p.name.upper()} called it {self.current_value}!\n\n")
+
+                                self.current_value = 3 if self.current_value == 1 else self.current_value + 3
+
+                                next_responding = not next_responding
+                                p = self.players[(i+1) % len(self.players)] if next_responding else player
+
+                            match response:
+                                case "a":
+                                    print(f"{p.name} accepted!")
+                                case "f":
+                                    print(f"-- {p.name} folded! --")
+                                    next_responding = not next_responding
+                                    p = self.players[(i+1) % len(self.players)] if next_responding else player
+
+                                    self.give_points(p, 3)
+        
+                                    return True
 
             theres_a_victor = self.finish_step()
 
@@ -134,7 +209,16 @@ class Game:
                 # ! MELOU
                 def melou() -> bool:
                     if any(len(player) == 0 for player in self.players):
-                        print("EMPATE! ninguém pontuou")
+
+                        if self.round_score_odd > self.round_score_even:
+                            self.round_score_odd = 3
+                            return True
+                        elif self.round_score_even > self.round_score_odd:
+                            self.round_score_even = 3
+                            return True
+
+
+                        print("DRAW! No points were given")
                         return False
                     for player in self.players:
                         card = max(player.cards, key = self.card_strength)
@@ -153,14 +237,6 @@ class Game:
 
             return True
 
-
-
-                
-
-
-
-
-
         def round():
             self.round_score_even, self.round_score_odd = 0, 0
             self.trick.clear()
@@ -171,6 +247,8 @@ class Game:
             self.current_value = 1
 
             distribute_cards()
+
+            print("\n\n##  ROUND START!  ##\n\n")
             while self.round_score_odd < 2 and self.round_score_even < 2:
                 st = step()
                 if not st:

@@ -1,6 +1,6 @@
 import random
 from dataclasses import dataclass
-from usotsuki import Ranks, Suits
+from usotsuki.core import Ranks, Suits
 from time import sleep
 
 @dataclass(frozen = True)
@@ -68,7 +68,7 @@ class Player:
         self.cards.append(card)
         self.cards_of_round.add(card)
 
-    def choose(self, question: str):
+    def choose(self, question: str, options: list | None = None):
         return input(question)
 
     def had(self, card: Card) -> bool:
@@ -91,8 +91,13 @@ class Bot(Player):
     def __init__(self, name: str = "player") -> None:
         super().__init__(name)
 
-    def choose(self, question: str):
+    def choose(self, question: str, options: list | None = None):
         sleep(1)
+
+        if options:
+            i = random.randint(0, len(options) - 1)
+            return options[i]
+        
         return str(random.randint(1, len(self.cards)))
     
     
