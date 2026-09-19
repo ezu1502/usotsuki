@@ -1,5 +1,6 @@
 from __future__ import annotations
 import arcade
+from pathlib import Path
 from arcade.types import Color
 
 from typing_extensions import TYPE_CHECKING
@@ -19,11 +20,49 @@ class UsoWindow(arcade.Window):
         self.game = game
 
         super().__init__(1280, 720, "Usotsuki", visible = False)
+        
         self.maximize()
         self.set_visible(True)
 
+        self.make_visual_objects()
+
     def run(self):
         arcade.run()
+
+    def make_visual_objects(self):
+        self.bg = arcade.LBWH(0, 0, *self.dimensions)
+        # self.labels = []
+        # for coordinate, player in zip(self.table_places(offset = 250), self.game.chair_order):
+        #     name_label = self.get_text_obj(f"{player.name}", *coordinate)
+        #     self.labels.append(name_label)
+
+        self.table = arcade.SpriteList()
+        
+        table = arcade.Sprite(
+            Path(__file__).parent.parent / "ui" / "sprites" / "png" / "table.png",
+            center_x = self.center_x,
+            center_y = self.center_y,
+            scale = 0.5
+        )
+        self.table.append(table)
+        
+
+
+
+        self.pfps = arcade.SpriteList()
+
+        for coordinate, player in zip(self.table_places(offset = 260), self.game.chair_order):
+            player_sprite = arcade.Sprite(
+                player.pfp,
+                center_x = coordinate[0],
+                center_y = coordinate[1],
+                scale = 0.4
+            )
+            self.pfps.append(player_sprite)
+
+    def on_resize(self, width: int, height: int):
+        super().on_resize(width, height)
+        self.make_visual_objects()
 
     #endregion
     #region Helpers
@@ -38,12 +77,12 @@ class UsoWindow(arcade.Window):
             color = c
         )
 
-    def render_text(self, text: str, x: int, y: int, color: str = "#EEEEEE", size: int = 25):
-        arcade.draw_text(
+    def get_text_obj(self, text: str, x: int, y: int, color: str = "#EEEEEE", size: int = 25):
+        return arcade.Text(
             text = text,
             x = x,
             y = y,
-            color = hex_color("#EEEEEE"),
+            color = hex_color(color),
             font_size = size,
             anchor_x = "center",
             anchor_y = "center"
@@ -62,14 +101,14 @@ class UsoWindow(arcade.Window):
 
         return [
             (x, y - offset),
-            (x - offset, y),
+            (x - int(offset), y),
             (x, y + offset),
-            (x + offset, y),
+            (x + int(offset), y),
         ]
 
     @property
     def center_coordinates(self):
-        return (int(self.center_x), int(self.center_y))
+        return (int(self.width // 2), int(self.height // 2))
     
     #endregion
     #region Settings
@@ -82,12 +121,13 @@ class UsoWindow(arcade.Window):
     def on_draw(self):
         self.clear()
 
-        self.render_rect(0, 0, *self.dimensions, "#0F4D4D")
+        arcade.draw_rect_filled(rect = self.bg, color = hex_color("#2C2F31"))
+        self.table.draw()
 
-        self.render_rect(*self.centered(200, 200), 200, 200, "#88C7C7")
-
-        for coordinate, player in zip(self.table_places(offset = 170), self.game.chair_order):
-            self.render_text(f"{player.name}", *coordinate)
+        self.pfps.draw()
+        # for label in self.labels:
+            # label.draw()
+        
 
     #endregion
 

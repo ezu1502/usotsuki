@@ -5,3 +5,10 @@ __pycache__/
 
 *.env
 .venv/
+
+*.svg
+*.png
+
+usotsuki/ui/sprites/
+!usotsuki/ui/sprites/png/cards/
+

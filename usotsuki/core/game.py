@@ -1,14 +1,20 @@
 from usotsuki.core import Ranks, Suits, Card, Deck, Player, Bot
 import random
+from pathlib import Path
 
 def clip(number: int, mini: int, maxi: int) -> int:
     return maxi if number > maxi else mini if number < mini else number
 
+sprites_folder: Path = Path(__file__).parent.parent / "ui" / "sprites" / "png"
+
 class Game:
     def __init__(self) -> None:
+        self.pfps = ["ado.png", "bolsonaro.png", "cr7.png", "dio.png"]
+
         self.players: list[Player] = self.summon_players()
+
         self.chair_order: list[Player] = self.players.copy()
-        
+
         self.deck = Deck()
 
         self.team_odd, self.team_even = self.get_teams()
@@ -30,10 +36,9 @@ class Game:
         
         return Ranks((self.vira.rank + 1) % len(Ranks))
 
-    @staticmethod
-    def summon_players() -> list[Player]:
+    def summon_players(self) -> list[Player]:
         names = ["Ado", "Bolsonaro", "Cristiano Ronaldo", "Dio"]
-        return [Player(names[0])] +[Bot(name) for name in names[1:]]
+        return [Player(sprites_folder / self.pfps[0], names[0])] + [Bot(sprites_folder / pfp, name) for pfp, name in zip(self.pfps[1:], names[1:])]
 
     def get_teams(self) -> tuple[list[Player], list[Player]]:
         random.shuffle(self.players)

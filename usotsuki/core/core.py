@@ -2,6 +2,7 @@ import random
 from dataclasses import dataclass
 from usotsuki.core import Ranks, Suits
 from time import sleep
+from pathlib import Path
 
 @dataclass(frozen = True)
 class Card:
@@ -56,10 +57,14 @@ class Deck:
 
 
 class Player:
-    def __init__(self, name: str = "player") -> None:
+    def __init__(self, pfp: Path, name: str = "player") -> None:
         self.cards: list[Card] = []
         self.cards_of_round: set[Card] = set(self.cards)
         self.name: str = name
+
+        self.pfp: Path = pfp
+
+
 
     def receive_card(self, card):
         if len(self.cards) >= 3:
@@ -88,8 +93,8 @@ class Player:
             return NotImplemented
 
 class Bot(Player):
-    def __init__(self, name: str = "player") -> None:
-        super().__init__(name)
+    def __init__(self, pfp: Path, name: str = "player") -> None:
+        super().__init__(pfp, name)
 
     def choose(self, question: str, options: list | None = None):
         sleep(1)
