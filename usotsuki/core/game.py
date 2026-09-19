@@ -252,6 +252,9 @@ class Game:
             self.current_value = 1
 
             distribute_cards()
+            print("dddddddd")
+
+            yield 1
 
             print("\n\n##  ROUND START!  ##\n\n")
             while self.round_score_odd < 2 and self.round_score_even < 2:
@@ -268,7 +271,9 @@ class Game:
 
 
         while self.score_even < 12 and self.score_odd < 12:
-            round()
+            r = round()
+            next(r)
+            yield 1
 
 
             

@@ -2,6 +2,8 @@ from __future__ import annotations
 import arcade
 from pathlib import Path
 from arcade.types import Color
+from usotsuki.toolbox import TimeCounter
+from usotsuki.ui.view import PlayerView, CardView, TableView
 
 from typing_extensions import TYPE_CHECKING
 
@@ -24,17 +26,29 @@ class UsoWindow(arcade.Window):
         self.maximize()
         self.set_visible(True)
 
+        self.load_assets()
+
+        match = self.game.match()
+        next(match)
+
         self.make_visual_objects()
+
+        
 
     def run(self):
         arcade.run()
 
+    @TimeCounter
+    def load_assets(self):
+        self.card_cache = {}
+        for card in self.game.deck:
+            self.card_cache[card] = arcade.load_texture(card.asset_path)
+
+        self.card_cache["back"] = arcade.load_texture(Path(__file__).parent/"sprites"/"png"/"cards"/"card_back.png")
+
+    @TimeCounter
     def make_visual_objects(self):
         self.bg = arcade.LBWH(0, 0, *self.dimensions)
-        # self.labels = []
-        # for coordinate, player in zip(self.table_places(offset = 250), self.game.chair_order):
-        #     name_label = self.get_text_obj(f"{player.name}", *coordinate)
-        #     self.labels.append(name_label)
 
         self.table = arcade.SpriteList()
         
@@ -45,20 +59,26 @@ class UsoWindow(arcade.Window):
             scale = 0.5
         )
         self.table.append(table)
-        
-
-
-
+    
         self.pfps = arcade.SpriteList()
 
+        self.table_view = TableView(self.game.vira, self.game.trick, self.card_cache)
+        self.table_view.set_position(*self.centered())
+        
+
+        self.players_view: list[PlayerView] = []
         for coordinate, player in zip(self.table_places(offset = 260), self.game.chair_order):
-            player_sprite = arcade.Sprite(
-                player.pfp,
-                center_x = coordinate[0],
-                center_y = coordinate[1],
-                scale = 0.4
-            )
-            self.pfps.append(player_sprite)
+            player_view = PlayerView(player, self.card_cache)
+            player_view.set_position(*coordinate)
+            self.players_view.append(player_view)
+
+
+        
+
+        
+            
+            
+
 
     def on_resize(self, width: int, height: int):
         super().on_resize(width, height)
@@ -88,7 +108,7 @@ class UsoWindow(arcade.Window):
             anchor_y = "center"
         )
 
-    def centered(self, W: int, H: int) -> tuple[int, int]:
+    def centered(self, W: int = 0, H: int = 0) -> tuple[int, int]:
         x = (self.width - W) // 2
         y = (self.height - H) // 2
         return (x, y)
@@ -101,9 +121,9 @@ class UsoWindow(arcade.Window):
 
         return [
             (x, y - offset),
-            (x - int(offset), y),
+            (x - int(offset * 1.5), y),
             (x, y + offset),
-            (x + int(offset), y),
+            (x + int(offset * 1.5), y),
         ]
 
     @property
@@ -121,13 +141,13 @@ class UsoWindow(arcade.Window):
     def on_draw(self):
         self.clear()
 
-        arcade.draw_rect_filled(rect = self.bg, color = hex_color("#2C2F31"))
+        arcade.draw_rect_filled(rect = self.bg, color = hex_color("#0E1020"))
         self.table.draw()
-
-        self.pfps.draw()
-        # for label in self.labels:
-            # label.draw()
         
+        self.table_view.draw()
+
+        for p in self.players_view:
+            p.draw()
 
     #endregion
 

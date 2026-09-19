@@ -4,6 +4,8 @@ from usotsuki.core import Ranks, Suits
 from time import sleep
 from pathlib import Path
 
+sprites_folder: Path = Path(__file__).parent.parent / "ui" / "sprites" / "png"
+
 @dataclass(frozen = True)
 class Card:
     rank: Ranks
@@ -21,6 +23,10 @@ class Card:
 
 
         return f"{rank} of {suit}"
+
+    @property
+    def asset_path(self):
+        return sprites_folder / "cards" / f"{self.rank.name.lower()}_{self.suit.name.lower()}.png"  
 
 
 class Deck:
