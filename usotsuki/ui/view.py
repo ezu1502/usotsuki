@@ -8,32 +8,35 @@ if TYPE_CHECKING:
     from usotsuki.core import Card, Player
 
 class TableView:
-    def __init__(self, vira, trick, cache: dict) -> None:
+    def __init__(self, vira, trick, cache: dict, coordinate: tuple[int, int]) -> None:
+        self.x, self.y = coordinate
         self.cache = cache
 
-
-        self.vira = vira if vira else None
-        self.trick: list[Card] = trick if trick else []
+        self.vira = vira
+        self.trick: list[Card] = trick
 
         self.cards = arcade.SpriteList()
-
+        
         self.update()
 
     def update(self):
         self.cards.clear()
+
+        if self.vira:
+            vira_view = CardView(self.vira, self.cache[self.vira])
+            self.cards.append(vira_view)
+
+        self.back = CardView(None, texture = self.cache["back"])
+        self.back.set_angle(70)
+        self.cards.append(self.back)
+
 
         for card in self.trick:
             c = CardView(card, texture = self.cache[card])
             c.angle = random.randint(-90, 90)
             self.cards.append(c)
 
-        if self.vira:
-            vira_view = CardView(self.vira, self.cache[self.vira])
-            self.back = CardView(None, texture = self.cache["back"])
-            self.back.set_angle(70)
-
-            self.cards.append(vira_view)
-            self.cards.append(self.back)
+        self.set_position(self.x, self.y)
 
     def draw(self):
         self.cards.draw()
@@ -84,7 +87,9 @@ class CardView(arcade.Sprite):
         return f"View: {self.card}"
 
 class PlayerView:
-    def __init__(self, player: Player, texture_cache: dict) -> None:
+    def __init__(self, player: Player, texture_cache: dict, coordinate: tuple[float, float]) -> None:
+        self.x, self.y = coordinate
+
         self.player = player
         self.cache = texture_cache
 
@@ -92,16 +97,22 @@ class PlayerView:
         self.pfp = arcade.Sprite(self.player.pfp, scale = 0.4)
         self.pfp_list.append(self.pfp)
 
-        
-
         self.cards = arcade.SpriteList()
         self.update_card_view()
 
     def update_card_view(self):
-        self.cards.clear()
+        player_cards = set(self.player.cards)
+        view_cards = {view.card: view for view in self.cards}
+
+        for card, view in view_cards.items():
+            if card not in player_cards:
+                self.cards.remove(view)
+
         for card in self.player.cards:
-            card_view = CardView(card = card, texture = self.cache[card])
-            self.cards.append(card_view)
+            if card not in view_cards:
+                self.cards.append(CardView(card, self.cache[card]))
+
+        self.set_position(self.x, self.y)
 
     def set_position(self, x, y):
         self.x = x

@@ -1,6 +1,10 @@
-from usotsuki.core import Ranks, Suits, Card, Deck, Player, Bot
+from collections.abc import Generator
 import random
 from pathlib import Path
+
+from usotsuki.core import Ranks, Suits, Card, Deck, Player, Bot
+from usotsuki.core.enums import Actions
+
 
 def clip(number: int, mini: int, maxi: int) -> int:
     return maxi if number > maxi else mini if number < mini else number
@@ -18,6 +22,7 @@ class Game:
         self.deck = Deck()
 
         self.team_odd, self.team_even = self.get_teams()
+        self.randomize_first_player()
 
         self.score_odd, self.score_even = 0, 0
         self.round_score_odd, self.round_score_even = 0, 0
@@ -41,38 +46,21 @@ class Game:
         return [Player(sprites_folder / self.pfps[0], names[0])] + [Bot(sprites_folder / pfp, name) for pfp, name in zip(self.pfps[1:], names[1:])]
 
     def get_teams(self) -> tuple[list[Player], list[Player]]:
-        random.shuffle(self.players)
+        p = self.players.copy()
+        random.shuffle(p)
 
-        return (self.players[::2], self.players[1::2])
+        return (p[::2], p[1::2])
+
+    def randomize_first_player(self):
+        i = random.randrange(len(self.players))
+
+        self.players = self.players[i:] + self.players[:i]
 
     def receive_card(self, card: Card):
         if self.vira is not None:
             return
 
         self.vira = card
-
-    def turn(self, player: Player):
-        cards = [f"[{indx}] - {card}" for indx, card in enumerate(player.cards, start = 1)]
-
-        trick = f"Cards in trick: {", ".join(map(str, self.trick))}" if self.trick else "- First to play -"
-
-        raising = "call TRUCO" if self.current_value == 1 else f"call it {self.current_value + 3}"
-        options = (
-            f"VIRA: {self.vira}\n\n"
-            f"{trick}\n\n"
-            f"Your turn now, {player.name}!\n\n"
-            f"Your cards are: \n{",\n".join(cards)}\n\n"
-            f"Type the number of your card to play it, [R] to {raising} or [F] to FOLD!\n> "
-        )
-        j = 0
-        while j < 3:
-            choice = player.choose(options) if j == 0 else player.choose(f"{{{j}}} > ")
-
-            if choice.upper() in ["1", "2", "3", "F", "R", "TRUCO"]:
-                return choice
-            j += 1
-
-        return random.randint(1, len(player.cards))
 
     def card_strength(self, card: Card):
         if card.rank == self.manilha:
@@ -152,21 +140,20 @@ class Game:
 
             self.deck.give_card(self, 1)
 
-        def step() -> bool:
+        def step() -> Generator[Player, int | str, bool]:
             for i, player in enumerate(self.players):
-                choice = self.turn(player)
-                try:
-                    choice = clip(int(choice) - 1, 0, len(player) - 1)
-                    card: Card = player.cards.pop(choice)
+                choice = yield player
 
+                if isinstance(choice, Card):
+                    card: Card = choice
+                    
+                    player.cards.remove(card)
                     self.trick.append(card)
 
                     print(f"\n -- {player.name} played the {card} --")
-
-                except ValueError:
-                    choice = str(choice)
-                    match choice.lower():
-                        case "f":
+                elif isinstance(choice, Actions):
+                    match choice:
+                        case Actions.FOLD:
                             print(f"-- {player.name} folded! --")
                             if self.in_odd_team(player):
                                 self.round_score_even += 3
@@ -175,9 +162,8 @@ class Game:
 
                             return True
                             
-                        case "r" | "truco":
+                        case Actions.RAISE:
                             print(f"{player.name.upper()} called TRUCO!\n\n")
-
 
                             next_responding = True
                             p = self.players[(i+1) % len(self.players)] if next_responding else player
@@ -242,7 +228,7 @@ class Game:
 
             return True
 
-        def round():
+        def round() -> Generator[Player, int | str, None]:
             self.round_score_even, self.round_score_odd = 0, 0
             self.trick.clear()
             self.pile.clear()
@@ -252,13 +238,11 @@ class Game:
             self.current_value = 1
 
             distribute_cards()
-            print("dddddddd")
-
-            yield 1
-
+  
+          
             print("\n\n##  ROUND START!  ##\n\n")
             while self.round_score_odd < 2 and self.round_score_even < 2:
-                st = step()
+                st = yield from step()
                 if not st:
                     return
                 
@@ -271,9 +255,7 @@ class Game:
 
 
         while self.score_even < 12 and self.score_odd < 12:
-            r = round()
-            next(r)
-            yield 1
+            yield from round()
 
 
             

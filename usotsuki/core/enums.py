@@ -1,4 +1,4 @@
-from enum import IntEnum
+from enum import IntEnum, Enum, auto
 
 class Ranks(IntEnum):
     FOUR = 0
@@ -18,3 +18,7 @@ class Suits(IntEnum):
     HEARTS = 2
     CLUBS = 3
 
+class Actions(Enum):
+    RAISE = auto()
+    FOLD = auto()
+    ACCEPT = auto()

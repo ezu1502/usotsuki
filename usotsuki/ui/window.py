@@ -4,11 +4,12 @@ from pathlib import Path
 from arcade.types import Color
 from usotsuki.toolbox import TimeCounter
 from usotsuki.ui.view import PlayerView, CardView, TableView
-
+import random
 from typing_extensions import TYPE_CHECKING
+from usotsuki.core.core import Bot
 
 if TYPE_CHECKING:
-    from usotsuki.core import Game
+    from usotsuki.core import Game, Player
 
 def hex_color(hex_string: str) -> Color:
     try:
@@ -28,17 +29,32 @@ class UsoWindow(arcade.Window):
 
         self.load_assets()
 
-        match = self.game.match()
-        next(match)
+        self.bot_delay: float = self.set_bot_delay()
+
+        self.play_or_advance()
 
         self.make_visual_objects()
+        
+    def set_bot_delay(self) -> float:
+        return random.uniform(0.7, 1.5)
+    
+    def play_or_advance(self):
+        if not hasattr(self, "match"):
+            self.match = self.game.match()
+            self.current_player = next(self.match)
 
+        if isinstance(self.current_player, Bot):
+            self.current_player = self.match.send(self.current_player.choose())
+
+        if hasattr(self, "players_view"):
+            self.update_views()
+            
         
 
     def run(self):
         arcade.run()
 
-    @TimeCounter
+    # @TimeCounter
     def load_assets(self):
         self.card_cache = {}
         for card in self.game.deck:
@@ -46,7 +62,7 @@ class UsoWindow(arcade.Window):
 
         self.card_cache["back"] = arcade.load_texture(Path(__file__).parent/"sprites"/"png"/"cards"/"card_back.png")
 
-    @TimeCounter
+    # @TimeCounter
     def make_visual_objects(self):
         self.bg = arcade.LBWH(0, 0, *self.dimensions)
 
@@ -62,14 +78,12 @@ class UsoWindow(arcade.Window):
     
         self.pfps = arcade.SpriteList()
 
-        self.table_view = TableView(self.game.vira, self.game.trick, self.card_cache)
-        self.table_view.set_position(*self.centered())
+        self.table_view = TableView(self.game.vira, self.game.trick, self.card_cache, self.centered())
         
 
         self.players_view: list[PlayerView] = []
         for coordinate, player in zip(self.table_places(offset = 260), self.game.chair_order):
-            player_view = PlayerView(player, self.card_cache)
-            player_view.set_position(*coordinate)
+            player_view = PlayerView(player, self.card_cache, coordinate)
             self.players_view.append(player_view)
 
         self.this_player = self.players_view[0]
@@ -128,6 +142,12 @@ class UsoWindow(arcade.Window):
     #endregion
     #region Settings
 
+    def update_views(self):
+        for player in self.players_view:
+            player.update_card_view()
+
+        self.table_view.update()
+
     def on_key_press(self, key: int, modifiers: int):
         match key:
             case arcade.key.F11:
@@ -145,13 +165,16 @@ class UsoWindow(arcade.Window):
             p.draw()
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
-        cards = arcade.get_sprites_at_point((x, y), self.this_player.cards)
+        if self.current_player != self.this_player.player: return
 
+        cards = arcade.get_sprites_at_point((x, y), self.this_player.cards)
         if not cards: return
 
         card = cards[-1]
 
-        print(card)
+        self.current_player = self.match.send(card.card)
+        self.bot_delay = self.set_bot_delay()
+        self.update_views()
 
     def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
         cards = self.this_player.cards
@@ -165,6 +188,20 @@ class UsoWindow(arcade.Window):
 
         for card in cards:
             card.set_hover(card is hovered_card)
+
+    def on_update(self, delta_time: float):
+        if not isinstance(self.current_player, Bot):
+            return
+    
+        self.bot_delay -= delta_time
+
+        if self.bot_delay <= 0:
+            self.play_or_advance()
+            # self.bot_delay = self.set_bot_delay()
+
+            if isinstance(self.current_player, Bot):
+                self.bot_delay = self.set_bot_delay()
+
     #endregion
 
 

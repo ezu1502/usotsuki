@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from usotsuki.core import Ranks, Suits
 from time import sleep
 from pathlib import Path
+from usotsuki.core.enums import Actions
 
 sprites_folder: Path = Path(__file__).parent.parent / "ui" / "sprites" / "png"
 
@@ -70,8 +71,6 @@ class Player:
 
         self.pfp: Path = pfp
 
-
-
     def receive_card(self, card):
         if len(self.cards) >= 3:
             raise RuntimeError("Player already has 3 cards!")
@@ -102,13 +101,8 @@ class Bot(Player):
     def __init__(self, pfp: Path, name: str = "player") -> None:
         super().__init__(pfp, name)
 
-    def choose(self, question: str, options: list | None = None):
-        sleep(1)
+    def choose(self, options: list | None = None): #  + [Actions.RAISE, Actions.FOLD]
+        return random.choice(options) if options else random.choice(self.cards)
 
-        if options:
-            i = random.randint(0, len(options) - 1)
-            return options[i]
-        
-        return str(random.randint(1, len(self.cards)))
     
     
