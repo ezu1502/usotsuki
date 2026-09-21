@@ -72,12 +72,7 @@ class UsoWindow(arcade.Window):
             player_view.set_position(*coordinate)
             self.players_view.append(player_view)
 
-
-        
-
-        
-            
-            
+        self.this_player = self.players_view[0]
 
 
     def on_resize(self, width: int, height: int):
@@ -149,6 +144,27 @@ class UsoWindow(arcade.Window):
         for p in self.players_view:
             p.draw()
 
+    def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
+        cards = arcade.get_sprites_at_point((x, y), self.this_player.cards)
+
+        if not cards: return
+
+        card = cards[-1]
+
+        print(card)
+
+    def on_mouse_motion(self, x: int, y: int, dx: int, dy: int):
+        cards = self.this_player.cards
+
+        hovered_card = None
+
+        for card in reversed(cards):
+            if card.collides_with_point((x,y)):
+                hovered_card = card
+                break
+
+        for card in cards:
+            card.set_hover(card is hovered_card)
     #endregion
 
 

@@ -24,7 +24,7 @@ class TableView:
 
         for card in self.trick:
             c = CardView(card, texture = self.cache[card])
-            c.sprite.angle = random.randint(-90, 90)
+            c.angle = random.randint(-90, 90)
             self.cards.append(c)
 
         if self.vira:
@@ -32,8 +32,8 @@ class TableView:
             self.back = CardView(None, texture = self.cache["back"])
             self.back.set_angle(70)
 
-            self.cards.append(vira_view.sprite)
-            self.cards.append(self.back.sprite)
+            self.cards.append(vira_view)
+            self.cards.append(self.back)
 
     def draw(self):
         self.cards.draw()
@@ -48,26 +48,40 @@ class TableView:
             card.center_x = x
             card.center_y = y
 
-        self.back.sprite.center_x = x
-        self.back.sprite.center_y = y - 30
+        self.back.center_x = x
+        self.back.center_y = y - 30
 
 
-class CardView:
+class CardView(arcade.Sprite):
     def __init__(self, card: Card | None, texture) -> None:
+        super().__init__(texture, scale = 0.13)
         self.card = card
-        self.sprite = arcade.Sprite(texture, scale = 0.13)
+
+        self.x = self.center_x
+        self.y = self.center_y
 
     def set_position(self, x: int, y: int, angle: int = 0):
         self.x = x
         self.y = y
 
-        self.sprite.center_x = x
-        self.sprite.center_y = y
+        self.center_x = x
+        self.center_y = y
 
-        self.sprite.angle = angle
+        self.angle = angle
 
     def set_angle(self, angle):
-        self.sprite.angle = angle
+        self.angle = angle
+
+    def set_hover(self, hover: bool):
+        if hover:
+            self.center_y = self.y + 15
+
+        else:
+            self.center_y = self.y
+
+
+    def __str__(self) -> str:
+        return f"View: {self.card}"
 
 class PlayerView:
     def __init__(self, player: Player, texture_cache: dict) -> None:
@@ -87,7 +101,7 @@ class PlayerView:
         self.cards.clear()
         for card in self.player.cards:
             card_view = CardView(card = card, texture = self.cache[card])
-            self.cards.append(card_view.sprite)
+            self.cards.append(card_view)
 
     def set_position(self, x, y):
         self.x = x
@@ -97,10 +111,9 @@ class PlayerView:
         self.pfp.center_y = y + 40
 
         for i, c in enumerate(self.cards, start = -1):
-            card: arcade.Sprite = c
+            card: CardView = c
 
-            card.center_x = x + i*20
-            card.center_y = y - 40
+            card.set_position(x + i * 20, y - 40)
 
             card.angle = 20*i
 
