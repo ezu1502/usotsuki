@@ -3,7 +3,7 @@ import arcade
 from pathlib import Path
 from arcade.types import Color
 from usotsuki.toolbox import TimeCounter
-from usotsuki.ui.view import PlayerView, CardView, TableView
+from usotsuki.ui.view import PlayerView, CardView, TableView, ScoreView
 import random
 from typing_extensions import TYPE_CHECKING
 from usotsuki.core.core import Bot
@@ -93,6 +93,8 @@ class UsoWindow(arcade.Window):
 
         self.this_player = self.players_view[0]
 
+        self.score_view = ScoreView(self.game, self.dimensions)
+
 
     def on_resize(self, width: int, height: int):
         super().on_resize(width, height)
@@ -157,6 +159,9 @@ class UsoWindow(arcade.Window):
         match key:
             case arcade.key.F11:
                 self.set_fullscreen(not self.fullscreen)
+            case arcade.key.R:
+                if self.current_player == self.this_player.player:
+                    print("truco")
 
     def on_draw(self):
         self.clear()
@@ -168,6 +173,8 @@ class UsoWindow(arcade.Window):
 
         for p in self.players_view:
             p.draw()
+
+        self.score_view.draw()
 
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         if self.current_player != self.this_player.player: return
