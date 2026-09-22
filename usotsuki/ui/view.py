@@ -1,6 +1,8 @@
 from __future__ import annotations
 import arcade
 import random
+from pathlib import Path
+
 from usotsuki.toolbox import TimeCounter
 
 from typing_extensions import TYPE_CHECKING
@@ -15,44 +17,50 @@ class TableView:
         self.vira = vira
         self.trick: list[Card] = trick
 
+        self.vira_view = None
+        self.trick_view = arcade.SpriteList()
+
         self.cards = arcade.SpriteList()
         
         self.update()
 
     def update(self):
-        self.cards.clear()
-
-        if self.vira:
-            vira_view = CardView(self.vira, self.cache[self.vira])
-            self.cards.append(vira_view)
+    
+        if self.vira and self.vira_view is None:
+            self.vira_view = CardView(self.vira, self.cache[self.vira])
+            self.cards.append(self.vira_view)
 
         self.back = CardView(None, texture = self.cache["back"])
         self.back.set_angle(70)
         self.cards.append(self.back)
 
-
         for card in self.trick:
-            c = CardView(card, texture = self.cache[card])
-            c.angle = random.randint(-90, 90)
-            self.cards.append(c)
+            if card not in [view.card for view in self.trick_view]:
+                c = CardView(card, texture = self.cache[card])
+                c.angle = random.randint(-90, 90)
+                self.trick_view.append(c)
+
+        for view in self.trick_view:
+            if view.card not in self.trick:
+                self.trick_view.remove(view)
 
         self.set_position(self.x, self.y)
 
     def draw(self):
         self.cards.draw()
+        self.trick_view.draw()
 
     def set_position(self, x, y):
         self.x = x
         self.y = y
 
-        for c in [v for v in self.cards if v != self.back]:
-            card: arcade.Sprite = c
+        for view in self.trick_view:
+            view.center_x, view.center_y = self.x, self.y
 
-            card.center_x = x
-            card.center_y = y
+        if self.vira_view:
+            self.vira_view.center_x, self.vira_view.center_y = self.x + 110, self.y + 110
 
-        self.back.center_x = x
-        self.back.center_y = y - 30
+        self.back.center_x, self.back.center_y = self.x + 110, self.y + 90
 
 
 class CardView(arcade.Sprite):
@@ -97,6 +105,17 @@ class PlayerView:
         self.pfp = arcade.Sprite(self.player.pfp, scale = 0.4)
         self.pfp_list.append(self.pfp)
 
+        self.name_text = arcade.Text (
+            self.player.name,
+            self.x,
+            self.y + 100,
+            color = arcade.color.WHITE,
+            font_name = "Sora",
+            font_size = 18,
+            anchor_x = "center",
+            anchor_y = "center"
+        )
+
         self.cards = arcade.SpriteList()
         self.update_card_view()
 
@@ -112,6 +131,8 @@ class PlayerView:
             if card not in view_cards:
                 self.cards.append(CardView(card, self.cache[card]))
 
+        self.name_text.x = self.x 
+        self.name_text.y = self.y + 100
         self.set_position(self.x, self.y)
 
     def set_position(self, x, y):
@@ -131,3 +152,4 @@ class PlayerView:
     def draw(self):
         self.pfp_list.draw()
         self.cards.draw()
+        self.name_text.draw()

@@ -31,8 +31,9 @@ class UsoWindow(arcade.Window):
 
         self.bot_delay: float = self.set_bot_delay()
 
-        self.play_or_advance()
+        self.match = self.game.match()
 
+        self.current_player = next(self.match)
         self.make_visual_objects()
         
     def set_bot_delay(self) -> float:
@@ -56,6 +57,10 @@ class UsoWindow(arcade.Window):
 
     # @TimeCounter
     def load_assets(self):
+        
+        self.font_path = Path(__file__).parent / "fonts" / "Sora-Regular.ttf"
+        arcade.load_font(self.font_path)
+
         self.card_cache = {}
         for card in self.game.deck:
             self.card_cache[card] = arcade.load_texture(card.asset_path)
