@@ -124,8 +124,6 @@ class Game:
         return player in self.team_odd
 
     def match(self):
-
-        # TODO Implementar lógica de pedir truco, foldar
         
         def distribute_cards():
             for player in self.players:

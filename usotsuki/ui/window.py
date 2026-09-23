@@ -51,6 +51,8 @@ class UsoWindow(arcade.Window):
         self.set_state(GS.PLAYING)
 
     def restart(self):
+        self.trucando = False
+
         self.game = Game()
         self.match = self.game.match()
         self.bot_delay = self.set_bot_delay()
@@ -179,6 +181,14 @@ class UsoWindow(arcade.Window):
             size = 20
         )
 
+        self.restart_text = self.get_text_obj(
+            "- press any key to restart -",
+            self.width // 2,
+            self.height // 2 - 50,
+            color = "#EEEEEE",
+            size = 20
+        )
+
 
     def on_resize(self, width: int, height: int):
         super().on_resize(width, height)
@@ -271,6 +281,7 @@ class UsoWindow(arcade.Window):
                 case arcade.key.A:
                     if self.trucando:
                         self.advance_match(Actions.ACCEPT)
+                        self.trucando = False
 
     def on_draw(self):
         self.clear()
@@ -280,6 +291,7 @@ class UsoWindow(arcade.Window):
             return
         if self.state == GS.MATCH_END:
             self.winner_screen_text.draw()
+            self.restart_text.draw()
             return
         if self.state == GS.MENU:
             arcade.draw_rect_filled(rect = self.bg, color = hex_color("#113025"))

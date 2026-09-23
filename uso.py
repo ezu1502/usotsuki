@@ -16,4 +16,4 @@ if __name__ == "__main__":
 # *FEITO adaptar a lógica do truco pro generator
 # *FEITO implementar representação visual de truco 
 # *FEITO implementar menu inicial
-# TODO melhorar lógica dos bots
+# PARA A v0.2 melhorar lógica dos bots
