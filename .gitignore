@@ -9,9 +9,13 @@ __pycache__/
 *.svg
 *.png
 
+!assets/*
+!assets/**
+
 usotsuki/ui/sprites/*
 
 !usotsuki/ui/sprites/png/
 !usotsuki/ui/sprites/png/cards/
 !usotsuki/ui/sprites/png/cards/**
+
 
