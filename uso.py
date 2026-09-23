@@ -12,7 +12,8 @@ if __name__ == "__main__":
 # *FEITO corrigir bug no trick
 # *FEITO implementar placar da rodada
 # *FEITO implementar placar geral
-# TODO implementar tela de vitória ou derrota
-# TODO implementar menu inicial
-# TODO implementar animação de cartas
+# *FEITO implementar tela de vitória ou derrota
+# *FEITO adaptar a lógica do truco pro generator
+# *FEITO implementar representação visual de truco 
+# *FEITO implementar menu inicial
 # TODO melhorar lógica dos bots

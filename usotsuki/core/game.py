@@ -1,9 +1,9 @@
 from collections.abc import Generator
 import random
 from pathlib import Path
-
+from typing import Any
 from usotsuki.core import Ranks, Suits, Card, Deck, Player, Bot
-from usotsuki.core.enums import Actions
+from usotsuki.core.enums import Actions, Teams
 
 
 def clip(number: int, mini: int, maxi: int) -> int:
@@ -42,7 +42,7 @@ class Game:
         return Ranks((self.vira.rank + 1) % len(Ranks))
 
     def summon_players(self) -> list[Player]:
-        names = ["Ado", "Bolsonaro", "Cristiano Ronaldo", "Dio"]
+        names = ["Ado (you)", "Bolsonaro", "Cristiano Ronaldo", "Dio"]
         return [Player(sprites_folder / self.pfps[0], names[0])] + [Bot(sprites_folder / pfp, name) for pfp, name in zip(self.pfps[1:], names[1:])]
 
     def get_teams(self) -> tuple[list[Player], list[Player]]:
@@ -61,6 +61,17 @@ class Game:
             return
 
         self.vira = card
+
+    def truco_string(self) -> str:
+        match self.current_value:
+            case 1:
+                return "TRUCO!"
+            case 3:
+                return "SIX!"
+            case 6:
+                return "NINE!"
+            case _:
+                return "TWELVE!"
 
     def card_strength(self, card: Card):
         if card.rank == self.manilha:
@@ -97,29 +108,12 @@ class Game:
         self.rotate_players(winner_player)
         return True
 
-    def truco(self, to_player):
-        i = 0
-
-        while i < 3:
-            question = (
-                "[A] - Accept\n"
-                "[F] - Fold\n"
-                f"[R] - Call it {min(self.current_value + 3, 12)}"
-            ) 
-
-            response = to_player.choose(question, options = ["a", "f", "r"]) if i == 0 else to_player.choose(f"{{{i}}} > ")
-
-            if response.lower() in ["a", "f", "r"]:
-                return response.lower()
-
-            i += 1
+    def truco(self, to_player) -> Generator[Player, Actions, Actions]:
 
 
-        return "f"
-            
-
-
-
+        response = yield to_player
+        return response
+           
     def give_points(self, player: Player, points: int):
         if player in self.team_odd:
             self.round_score_odd += points
@@ -140,59 +134,64 @@ class Game:
 
             self.deck.give_card(self, 1)
 
-        def step() -> Generator[Player, int | str, bool]:
+        def step() -> Generator[Player, Any, bool]:
             for i, player in enumerate(self.players):
-                choice = yield player
+                while True:
+                    choice = yield player
 
-                if isinstance(choice, Card):
-                    card: Card = choice
-                    
-                    player.cards.remove(card)
-                    self.trick.append(card)
+                    if isinstance(choice, Card):
+                        card: Card = choice
+                        
+                        player.cards.remove(card)
+                        self.trick.append(card)
 
-                    print(f"\n -- {player.name} played the {card} --")
-                elif isinstance(choice, Actions):
-                    match choice:
-                        case Actions.FOLD:
-                            print(f"-- {player.name} folded! --")
-                            if self.in_odd_team(player):
-                                self.round_score_even += 3
-                            else:
-                                self.round_score_odd += 3
+                        print(f"\n -- {player.name} played the {card} --")
 
-                            return True
-                            
-                        case Actions.RAISE:
-                            print(f"{player.name.upper()} called TRUCO!\n\n")
+                        break
+                    elif isinstance(choice, Actions):
+                        match choice:
+                            case Actions.FOLD:
+                                print(f"-- {player.name} folded! --")
+                                if self.in_odd_team(player):
+                                    self.round_score_even += 3
+                                else:
+                                    self.round_score_odd += 3
 
-                            next_responding = True
-                            p = self.players[(i+1) % len(self.players)] if next_responding else player
-
-                            while True:
-                                response = self.truco(p)
-
-                                if response != "r":
-                                    break
-
+                                return True
                                 
-                                print(f"{p.name.upper()} called it {self.current_value}!\n\n")
+                            case Actions.RAISE:
+                                print(f"{player.name.upper()} called TRUCO!\n\n")
 
-                                self.current_value = 3 if self.current_value == 1 else self.current_value + 3
-
-                                next_responding = not next_responding
+                                next_responding = True
                                 p = self.players[(i+1) % len(self.players)] if next_responding else player
 
-                            match response:
-                                case "a":
-                                    print(f"{p.name} accepted!")
-                                case "f":
-                                    print(f"-- {p.name} folded! --")
+                                while True:
+                                    response = yield from self.truco(p)
+
+                                    if response != Actions.RAISE:
+                                        break
+
+                                    self.current_value = 3 if self.current_value == 1 else min(self.current_value + 3, 12)
+
+                                    print(f"{p.name.upper()} called it {self.truco_string().upper()}!\n\n")
+
                                     next_responding = not next_responding
                                     p = self.players[(i+1) % len(self.players)] if next_responding else player
 
-                                    self.give_points(p, 3)
-        
-                                    return True
+                                match response:
+                                    case Actions.ACCEPT:
+                                        self.current_value = 3 if self.current_value == 1 else min(self.current_value + 3, 12)
+                                        print(f"{p.name} accepted!")
+                                        continue
+                                
+                                    case Actions.FOLD:
+                                        print(f"-- {p.name} folded! --")
+                                        next_responding = not next_responding
+                                        p = self.players[(i+1) % len(self.players)] if next_responding else player
+
+                                        self.give_points(p, self.current_value)
+            
+                                        return True
 
             theres_a_victor = self.finish_step()
 
@@ -228,7 +227,7 @@ class Game:
 
             return True
 
-        def round() -> Generator[Player, int | str, None]:
+        def round() -> Generator[Player, int | str, Teams | None]:
             self.round_score_even, self.round_score_odd = 0, 0
             self.trick.clear()
             self.pile.clear()
@@ -248,15 +247,25 @@ class Game:
                 
             if self.round_score_odd >= 2:
                 self.score_odd += self.current_value
+                return Teams.ODD
             elif self.round_score_even >= 2:
                 self.score_even += self.current_value
+                return Teams.EVEN
             else:
                 raise RuntimeError("Bro, idk what happened here")
 
-
         while self.score_even < 12 and self.score_odd < 12:
-            yield from round()
+            round_result = yield from round()
+            yield round_result
+
+        if self.score_odd >= 12:
+            return Teams.ODD
+        if self.score_even >= 12:
+            return Teams.EVEN
+
+        raise RuntimeError("Something went wrong")
+
+        
 
 
-            
             

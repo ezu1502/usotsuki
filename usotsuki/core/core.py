@@ -4,6 +4,8 @@ from usotsuki.core import Ranks, Suits
 from time import sleep
 from pathlib import Path
 from usotsuki.core.enums import Actions
+from typing import Any
+
 
 sprites_folder: Path = Path(__file__).parent.parent / "ui" / "sprites" / "png"
 
@@ -101,7 +103,7 @@ class Bot(Player):
     def __init__(self, pfp: Path, name: str = "player") -> None:
         super().__init__(pfp, name)
 
-    def choose(self, options: list | None = None): #  + [Actions.RAISE, Actions.FOLD]
+    def choose(self, options: list | None = None) -> Any: #  + [Actions.RAISE, Actions.FOLD]
         return random.choice(options) if options else random.choice(self.cards)
 
     

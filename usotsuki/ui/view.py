@@ -2,6 +2,7 @@ from __future__ import annotations
 import arcade
 import random
 from pathlib import Path
+from usotsuki.core import Bot
 
 from usotsuki.toolbox import TimeCounter
 
@@ -70,6 +71,9 @@ class TableView:
 
 class CardView(arcade.Sprite):
     def __init__(self, card: Card | None, texture) -> None:
+
+        
+
         super().__init__(texture, scale = 0.13)
         self.card = card
 
@@ -134,7 +138,8 @@ class PlayerView:
 
         for card in self.player.cards:
             if card not in view_cards:
-                self.cards.append(CardView(card, self.cache[card]))
+                texture = self.cache[card] if not isinstance(self.player, Bot) else self.cache["back"]
+                self.cards.append(CardView(card, texture))
 
         
         self.set_position(self.x, self.y)

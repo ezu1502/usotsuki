@@ -22,3 +22,14 @@ class Actions(Enum):
     RAISE = auto()
     FOLD = auto()
     ACCEPT = auto()
+
+class Teams(Enum):
+    ODD = "odd team"
+    EVEN = "even team"
+
+class GameState(Enum):
+    PLAYING = auto()
+    ROUND_END = auto()
+    MATCH_END = auto()
+    
+    MENU = auto()

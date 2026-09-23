@@ -7,9 +7,11 @@ from usotsuki.ui.view import PlayerView, CardView, TableView, ScoreView
 import random
 from typing_extensions import TYPE_CHECKING
 from usotsuki.core.core import Bot
+from usotsuki.core.enums import Teams, GameState as GS, Actions
+from  usotsuki.core import Game
 
 if TYPE_CHECKING:
-    from usotsuki.core import Game, Player
+    from usotsuki.core import Player
 
 def hex_color(hex_string: str) -> Color:
     try:
@@ -23,32 +25,89 @@ class UsoWindow(arcade.Window):
         self.game = game
 
         super().__init__(1280, 720, "Usotsuki", visible = False)
-        
+
+        self.state: GS = GS.MENU
+       
         self.maximize()
         self.set_visible(True)
 
         self.load_assets()
 
+        self.winner_screen_text = self.get_text_obj("", *self.centered())
+        self.winner_screen_time = 0.0
+                
+
         self.bot_delay: float = self.set_bot_delay()
 
         self.match = self.game.match()
 
-        self.current_player = next(self.match)
-        self.make_visual_objects()
         
+        self.advance_match()
+        self.make_visual_objects()
+        self.trucando = False
+
+    def start(self):
+        
+        self.set_state(GS.PLAYING)
+
+    def restart(self):
+        self.game = Game()
+        self.match = self.game.match()
+        self.bot_delay = self.set_bot_delay()
+        self.advance_match()
+        self.make_visual_objects()
+
     def set_bot_delay(self) -> float:
         return random.uniform(0.7, 1.5)
+
+    def set_state(self, state: GS) -> None:
+        self.state = state
     
+    def match_finished(self, team):
+        self.winner_screen_text.text = f"MATCH FINISHED! The winner is {team.value.capitalize()}"
+        self.set_state(GS.MATCH_END)
+
+    def round_finished(self, result):
+        self.winner_screen_time = 1.0
+        self.winner_screen_text.text = f"{result.value.capitalize()} won the round!"
+        self.set_state(GS.ROUND_END)
+
+    def advance_match(self, value = None):
+        try:
+            if value is None:
+                result = next(self.match)
+            else:
+                result = self.match.send(value)
+
+        except StopIteration as e:
+            self.match_finished(e.value)   
+            return
+
+        if isinstance(result, Teams):
+            self.round_finished(result)
+            self.advance_match()
+            return
+
+        self.current_player = result
+
     def play_or_advance(self):
-        if not hasattr(self, "match"):
-            self.match = self.game.match()
-            self.current_player = next(self.match)
-
         if isinstance(self.current_player, Bot):
-            self.current_player = self.match.send(self.current_player.choose())
+            if self.trucando:
+                response = self.current_player.choose(options = [Actions.ACCEPT, Actions.RAISE, Actions.FOLD])
+            else:    
+                response = self.current_player.choose()
+            
 
-        if hasattr(self, "players_view"):
-            self.update_views()
+            self.advance_match(response)
+
+            if response == Actions.RAISE:
+                self.trucando = True
+                self.truco_text.text = self.game.truco_string()
+            else:
+                self.trucando = False
+
+
+        self.update_views()
             
         
 
@@ -95,6 +154,31 @@ class UsoWindow(arcade.Window):
 
         self.score_view = ScoreView(self.game, self.dimensions)
 
+        self.truco_text = self.get_text_obj(
+            "",
+            *self.centered(),
+            color = "#FF0000",
+            size = 60
+        )
+
+        self.truco_rect = arcade.LBWH(0, 0, self.width, self.height)
+
+        self.title = self.get_text_obj(
+            "Usotsuki - Brazilian Truco",
+            self.width // 2,
+            self.height // 2,
+            color = "#EEEEEE",
+            size = 50
+        )
+
+        self.subtitle = self.get_text_obj(
+            "- press any key to continue -",
+            self.width // 2,
+            self.height // 2 - 50,
+            color = "#EEEEEE",
+            size = 20
+        )
+
 
     def on_resize(self, width: int, height: int):
         super().on_resize(width, height)
@@ -120,6 +204,7 @@ class UsoWindow(arcade.Window):
             y = y,
             color = hex_color(color),
             font_size = size,
+            font_name = "Sora",
             anchor_x = "center",
             anchor_y = "center"
         )
@@ -156,16 +241,52 @@ class UsoWindow(arcade.Window):
         self.table_view.update()
 
     def on_key_press(self, key: int, modifiers: int):
-        match key:
-            case arcade.key.F11:
-                self.set_fullscreen(not self.fullscreen)
-            case arcade.key.R:
-                if self.current_player == self.this_player.player:
-                    print("truco")
+        if self.state == GS.MATCH_END:
+            self.set_state(GS.PLAYING)
+
+            self.restart()
+
+            return
+
+        if self.state == GS.MENU:
+            self.start()
+
+        
+        if key == arcade.key.F11:
+            self.set_fullscreen(not self.fullscreen)
+        if key == arcade.key.ESCAPE:
+            self.set_fullscreen(False)
+
+        if self.current_player == self.this_player.player:
+            match key:
+                case arcade.key.R:
+                    self.bot_delay = self.set_bot_delay()
+                    self.advance_match(Actions.RAISE)
+
+                    self.trucando = True
+                    self.truco_text.text = self.game.truco_string()
+                case arcade.key.F:
+                    self.trucando = False
+                    self.advance_match(Actions.FOLD)
+                case arcade.key.A:
+                    if self.trucando:
+                        self.advance_match(Actions.ACCEPT)
 
     def on_draw(self):
         self.clear()
 
+        if self.state == GS.ROUND_END:
+            self.winner_screen_text.draw()
+            return
+        if self.state == GS.MATCH_END:
+            self.winner_screen_text.draw()
+            return
+        if self.state == GS.MENU:
+            arcade.draw_rect_filled(rect = self.bg, color = hex_color("#113025"))
+            self.title.draw()
+            self.subtitle.draw()
+            return
+        
         arcade.draw_rect_filled(rect = self.bg, color = hex_color("#0E1020"))
         self.table.draw()
         
@@ -176,6 +297,12 @@ class UsoWindow(arcade.Window):
 
         self.score_view.draw()
 
+        if self.trucando:
+            self.truco_text.draw()
+
+        if self.game.current_value > 1:
+            arcade.draw_rect_outline(rect = self.truco_rect, color = Color(255, 0, 0), border_width = 10)
+
     def on_mouse_press(self, x: int, y: int, button: int, modifiers: int):
         if self.current_player != self.this_player.player: return
 
@@ -184,7 +311,7 @@ class UsoWindow(arcade.Window):
 
         card = cards[-1]
 
-        self.current_player = self.match.send(card.card)
+        self.advance_match(card.card)
         self.bot_delay = self.set_bot_delay()
         self.update_views()
 
@@ -202,6 +329,21 @@ class UsoWindow(arcade.Window):
             card.set_hover(card is hovered_card)
 
     def on_update(self, delta_time: float):
+        if self.state == GS.ROUND_END:
+            self.winner_screen_time -= delta_time
+
+            if self.winner_screen_time <= 0:
+                self.set_state(GS.PLAYING)
+                self.advance_match()
+
+            return
+
+        if self.state == GS.MATCH_END:
+            return
+
+        if self.state == GS.MENU:
+            return
+
         if not isinstance(self.current_player, Bot):
             return
     
