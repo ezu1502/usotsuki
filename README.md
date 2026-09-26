@@ -31,6 +31,14 @@ Developed as my final project for CS50x.
 - |F11| - Toggle fullscreen
 - |ESC| - Exit fullscreen
 
+## Gameplay
+
+Usotsuki is designed to keep the rules of Brazilian Truco while presenting them through a simple graphical interface. The player controls one of the four seats at the table, while the other three seats are controlled by bots. Each round consists of several tricks, with the objective of winning two of them before the opposing team.
+
+The game also includes the betting system that makes Truco different from a simple card game. Players can increase the value of a round by calling Truco, Six, Nine or Twelve. Each increase creates a decision for the opposing team: accept the new value, raise it further, or fold and give the round to the other team.
+
+The bots use the same game rules as the human player and interact with the game through the same action system. This means that the graphical interface does not need to know whether an action came from a human player or a bot.
+
 ## Installation
 
 Run the following in your terminal to clone the repository:
@@ -106,6 +114,20 @@ usotsuki/ {
     }
 }
 ```
+
+## Design Decisions
+
+A significant design choice was using a generator instead of a traditional loop to control the match. A conventional game loop could have handled turns, but it would have made the game's decision flow more tightly coupled to the graphical framework. Using a generator, I was able to make the Game module deliver turns one at a time, waiting for the Player (or Bot) to send input in order to unpause the main logic.
+
+Another decision was representing cards using frozen dataclasses. Since a card's identity throughout the match remains always the same, I made the class immutable to prevent accidental modification while keeping the representation concise.
+
+The game also uses separate view classes instead of drawing every element directly inside the *UsoWindow*. This keeps the main window responsible primarily for input and coordination, while PlayerView, CardView and others handle their respective visual elements.
+
+## Future Improvements
+
+Possible future improvements include adding more sophisticated bot behavior, improving the visual feedback during gameplay, adding sound effects and music, and expanding the interface with additional game information.
+
+The current version focuses primarily on implementing the core rules and creating a complete playable match. These improvements could be added without fundamentally changing the game's core architecture.
 
 ## CS50x
 
