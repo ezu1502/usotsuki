@@ -6,8 +6,6 @@ A graphical Brazilian Truco game made with **Python** and **Arcade**.
 
 Play a match against three bots, call Truco, raise the stakes, fold, and fight your way to 12 points.
 
-Developed as my final project for CS50x.
-
 ## v0.1.0 Features
 
 - Brazilian Truco gameplay
@@ -128,13 +126,6 @@ The game also uses separate view classes instead of drawing every element direct
 Possible future improvements include adding more sophisticated bot behavior, improving the visual feedback during gameplay, adding sound effects and music, and expanding the interface with additional game information.
 
 The current version focuses primarily on implementing the core rules and creating a complete playable match. These improvements could be added without fundamentally changing the game's core architecture.
-
-## CS50x
-
-Usotsuki was created as my final project for **Harvard University's CS50x.**
-
-The project was designed to apply concepts learned throughout the course, while also allowing me to learn and explore
-Python generators (which were, arguably, the hardest feature to implement), object-oriented programming, game-state management and graphical programming with Arcade.
 
 ## Author
 
